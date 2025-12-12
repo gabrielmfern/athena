@@ -12,6 +12,7 @@ import {
   fetchIssuesAndPRs,
   type Issue,
 } from "./lib/utils/fetch-issues-and-prs";
+import { octokit } from "./lib/octokit";
 
 const colors = {
   red: RGBA.fromValues(251, 43.8, 54.3),
@@ -82,10 +83,22 @@ function App() {
           focused
           showScrollIndicator
           flexGrow={1}
-          onKeyDown={(event) => {
+          onKeyDown={async (event) => {
             if (event.raw === "r") {
               const selectedIndex = selectRef.current?.selectedIndex;
-              debugger;
+              if (selectedIndex === undefined) return;
+              const issue = items[selectedIndex];
+              if (issue === undefined) return;
+              const refreshed = await octokit.issues.get({
+                repo: issue.repository_url,
+                owner: "resend",
+                issue_number: issue.number,
+              });
+              setItems((prevItems) => {
+                const newItems = [...prevItems];
+                newItems[selectedIndex] = refreshed.data as Issue;
+                return newItems;
+              });
             }
           }}
           ref={selectRef}
