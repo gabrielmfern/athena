@@ -1,10 +1,11 @@
-import { createCliRenderer, TextAttributes, RGBA } from "@opentui/core";
+import path from "node:path";
+import { createCliRenderer, RGBA, TextAttributes } from "@opentui/core";
 import { createRoot } from "@opentui/react";
-import { useState, useEffect } from "react";
-import { octokit } from "./lib/octokit";
+import open from "open";
+import { useEffect, useState } from "react";
 import {
   fetchIssuesAndPRs,
-  type IssueOrPR,
+  type Issue,
 } from "./lib/utils/fetch-issues-and-prs";
 
 const colors = {
@@ -14,7 +15,7 @@ const colors = {
 } as const satisfies Record<string, RGBA>;
 
 function App() {
-  const [items, setItems] = useState<IssueOrPR[]>([]);
+  const [items, setItems] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,30 +62,17 @@ function App() {
       )}
 
       {!loading && !error && items.length > 0 && (
-        <box flexDirection="column" flexGrow={1}>
-          {items.map((item) => (
-            <box key={item.number} flexDirection="row" marginBottom={1}>
-              <box marginRight={1}>
-                <text
-                  style={{
-                    fg: item.pull_request ? colors.green : colors.yellow,
-                  }}
-                >
-                  {item.pull_request ? "[PR]" : "[Issue]"}
-                </text>
-              </box>
-              <box marginRight={1}>
-                <text attributes={TextAttributes.DIM}>#{item.number}</text>
-              </box>
-              <box flexGrow={1}>
-                <text>{item.title}</text>
-              </box>
-              <box marginLeft={1}>
-                <text attributes={TextAttributes.DIM}>@{item.user.login}</text>
-              </box>
-            </box>
-          ))}
-        </box>
+        <select
+          focused
+          showScrollIndicator
+          flexGrow={1}
+          onSelect={(_, option) => open(option?.value)}
+          options={items.map((item) => ({
+            name: `${item.title}`,
+            description: `#${item.number} - ${path.basename(new URL(item.repository_url).pathname)}`,
+            value: item.html_url,
+          }))}
+        />
       )}
     </box>
   );

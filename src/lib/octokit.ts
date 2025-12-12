@@ -1,3 +1,3 @@
-import { Octokit } from "@octokit/core";
+import { Octokit } from "@octokit/rest";
 
 export const octokit = new Octokit({ auth: process.env.GITHUB_PAT });
