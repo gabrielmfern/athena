@@ -1,24 +1,26 @@
 {
-  "name": "athena",
-  "module": "src/index.tsx",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "dev": "bun run --watch src/index.tsx"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.3.8",
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@octokit/core": "^7.0.6",
-    "@octokit/rest": "^22.0.1",
-    "@opentui/core": "^0.1.60",
-    "@opentui/react": "^0.1.60",
-    "open": "^11.0.0",
-    "react": "^19.1.1"
-  }
+	"name": "athena",
+	"module": "src/index.tsx",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "bun run --watch src/index.tsx",
+		"debug": "bun --inspect run --watch src/index.tsx"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.8",
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"@octokit/core": "^7.0.6",
+		"@octokit/rest": "^22.0.1",
+		"@opentui/core": "^0.1.60",
+		"@opentui/react": "^0.1.60",
+		"open": "^11.0.0",
+		"react": "^19.1.1"
+	}
 }
+

@@ -1,8 +1,13 @@
 import path from "node:path";
-import { createCliRenderer, RGBA, TextAttributes } from "@opentui/core";
-import { createRoot } from "@opentui/react";
+import {
+  createCliRenderer,
+  RGBA,
+  SelectRenderable,
+  TextAttributes,
+} from "@opentui/core";
+import { createRoot, useKeyboard } from "@opentui/react";
 import open from "open";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   fetchIssuesAndPRs,
   type Issue,
@@ -32,6 +37,17 @@ function App() {
       .catch((error) => setError(String(error)))
       .finally(() => setLoading(false));
   }, []);
+
+  const selectRef = useRef<SelectRenderable>(null);
+
+  useKeyboard((key) => {
+    if (key.raw === "q") {
+      root.unmount();
+      renderer.stop();
+      renderer.destroy();
+      process.exit(0);
+    }
+  });
 
   return (
     <box flexDirection="column" flexGrow={1} padding={1}>
@@ -66,7 +82,16 @@ function App() {
           focused
           showScrollIndicator
           flexGrow={1}
-          onSelect={(_, option) => open(option?.value)}
+          onKeyDown={(event) => {
+            if (event.raw === "r") {
+              const selectedIndex = selectRef.current?.selectedIndex;
+              debugger;
+            }
+          }}
+          ref={selectRef}
+          onSelect={(_, option) => {
+            open(option?.value);
+          }}
           options={items.map((item) => ({
             name: `${item.title}`,
             description: `#${item.number} - ${path.basename(new URL(item.repository_url).pathname)}`,
@@ -79,4 +104,5 @@ function App() {
 }
 
 const renderer = await createCliRenderer();
-createRoot(renderer).render(<App />);
+const root = createRoot(renderer);
+root.render(<App />);
