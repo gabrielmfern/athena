@@ -21,7 +21,7 @@ const colors = {
 } as const satisfies Record<string, RGBA>;
 
 function App() {
-  const [items, setItems] = useState<Issue[]>([]);
+  const [issues, setItems] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +39,7 @@ function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  const selectRef = useRef<SelectRenderable>(null);
+  const [selected, setSelected] = useState(0);
 
   useKeyboard((key) => {
     if (key.raw === "q") {
@@ -70,7 +70,7 @@ function App() {
         </box>
       )}
 
-      {!loading && !error && items.length === 0 && (
+      {!loading && !error && issues.length === 0 && (
         <box>
           <text attributes={TextAttributes.DIM}>
             No open issues or PRs found.
@@ -78,42 +78,52 @@ function App() {
         </box>
       )}
 
-      {!loading && !error && items.length > 0 && (
+      {!loading && !error && issues.length > 0 && (
         <select
           focused
           showScrollIndicator
           flexGrow={1}
           onKeyDown={async (event) => {
             if (event.raw === "r") {
-              const selectedIndex = selectRef.current?.selectedIndex;
-              if (selectedIndex === undefined) return;
-              const issue = items[selectedIndex];
+              if (selected === undefined) return;
+              const issue = issues[selected];
               if (issue === undefined) return;
               const refreshed = await octokit.issues.get({
-                repo: issue.repository_url,
+                repo: getRepositoryName(issue),
                 owner: "resend",
                 issue_number: issue.number,
               });
               setItems((prevItems) => {
+                if (refreshed.data.state === "closed") {
+                  return prevItems.filter((_, index) => index !== selected);
+                }
                 const newItems = [...prevItems];
-                newItems[selectedIndex] = refreshed.data as Issue;
+                newItems[selected] = refreshed.data as Issue;
                 return newItems;
               });
             }
           }}
-          ref={selectRef}
+          selectedIndex={selected}
+          onChange={(index) => {
+            setSelected(index);
+          }}
           onSelect={(_, option) => {
             open(option?.value);
           }}
-          options={items.map((item) => ({
-            name: `${item.title}`,
-            description: `#${item.number} - ${path.basename(new URL(item.repository_url).pathname)}`,
-            value: item.html_url,
+          options={issues.map((issue) => ({
+            name: `${issue.title}`,
+            description: `#${issue.number} - ${getRepositoryName(issue)}`,
+            value: issue.html_url,
           }))}
         />
       )}
     </box>
   );
+}
+
+function getRepositoryName(issue: Issue) {
+  const url = new URL(issue.repository_url);
+  return path.basename(url.pathname);
 }
 
 const renderer = await createCliRenderer();
