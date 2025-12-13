@@ -24,6 +24,8 @@ function App() {
   const [issues, setItems] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -41,12 +43,36 @@ function App() {
 
   const [selected, setSelected] = useState(0);
 
+  const filteredIssues = issues.filter((issue) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    const title = issue.title.toLowerCase();
+    const repoName = getRepositoryName(issue).toLowerCase();
+    const number = String(issue.number);
+    return (
+      title.includes(query) ||
+      repoName.includes(query) ||
+      number.includes(query)
+    );
+  });
+
+  // Reset selection when filter changes
+  useEffect(() => {
+    setSelected(0);
+  }, [searchQuery]);
+
   useKeyboard((key) => {
-    if (key.raw === "q") {
+    if (key.raw === "q" && !isSearchFocused) {
       root.unmount();
       renderer.stop();
       renderer.destroy();
       process.exit(0);
+    }
+    if (key.raw === "/" && !isSearchFocused) {
+      setIsSearchFocused(true);
+    }
+    if (key.name === "escape" && isSearchFocused) {
+      setIsSearchFocused(false);
     }
   });
 
@@ -56,6 +82,17 @@ function App() {
         <text attributes={TextAttributes.BOLD}>
           Resend Organization - Open Issues & PRs
         </text>
+      </box>
+
+      <box marginBottom={1}>
+        <text attributes={TextAttributes.DIM}>Search: </text>
+        <input
+          focused={isSearchFocused}
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onSubmit={() => setIsSearchFocused(false)}
+          placeholder="Type to filter... (press / to focus, Esc to unfocus)"
+        />
       </box>
 
       {loading && (
@@ -78,15 +115,26 @@ function App() {
         </box>
       )}
 
-      {!loading && !error && issues.length > 0 && (
+      {!loading &&
+        !error &&
+        issues.length > 0 &&
+        filteredIssues.length === 0 && (
+          <box>
+            <text attributes={TextAttributes.DIM}>
+              No results matching "{searchQuery}"
+            </text>
+          </box>
+        )}
+
+      {!loading && !error && filteredIssues.length > 0 && (
         <select
-          focused
+          focused={!isSearchFocused}
           showScrollIndicator
           flexGrow={1}
           onKeyDown={async (event) => {
             if (event.raw === "r") {
               if (selected === undefined) return;
-              const issue = issues[selected];
+              const issue = filteredIssues[selected];
               if (issue === undefined) return;
               const refreshed = await octokit.issues.get({
                 repo: getRepositoryName(issue),
@@ -94,11 +142,17 @@ function App() {
                 issue_number: issue.number,
               });
               setItems((prevItems) => {
+                const originalIndex = prevItems.findIndex(
+                  (i) => i.id === issue.id,
+                );
+                if (originalIndex === -1) return prevItems;
                 if (refreshed.data.state === "closed") {
-                  return prevItems.filter((_, index) => index !== selected);
+                  return prevItems.filter(
+                    (_, index) => index !== originalIndex,
+                  );
                 }
                 const newItems = [...prevItems];
-                newItems[selected] = refreshed.data as Issue;
+                newItems[originalIndex] = refreshed.data as Issue;
                 return newItems;
               });
             }
@@ -110,7 +164,7 @@ function App() {
           onSelect={(_, option) => {
             open(option?.value);
           }}
-          options={issues.map((issue) => ({
+          options={filteredIssues.map((issue) => ({
             name: `${issue.title}`,
             description: `#${issue.number} - ${getRepositoryName(issue)}`,
             value: issue.html_url,
