@@ -5,7 +5,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "bun run --watch src/index.tsx",
-		"debug": "bun --inspect-wait run --watch src/index.tsx"
+		"debug": "bun --inspect-wait run src/index.tsx"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.8",
@@ -23,4 +23,3 @@
 		"react": "^19.1.1"
 	}
 }
-
