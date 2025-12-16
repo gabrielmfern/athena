@@ -141,3 +141,5 @@ function getRepositoryName(issue: Issue) {
 const renderer = await createCliRenderer();
 const root = createRoot(renderer);
 root.render(<App />);
+
+renderer.console.toggle();
