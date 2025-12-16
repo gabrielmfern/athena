@@ -8,11 +8,8 @@ import {
 import { createRoot, useKeyboard } from "@opentui/react";
 import open from "open";
 import { useEffect, useRef, useState } from "react";
-import {
-  fetchIssuesAndPRs,
-  type Issue,
-} from "./lib/utils/fetch-issues-and-prs";
-import { octokit } from "./lib/octokit";
+import { type Issue } from "./lib/utils/fetch-issues-and-prs";
+import { useIssuesAndPRs } from "./lib/hooks/useIssuesAndPRs";
 
 const colors = {
   red: RGBA.fromValues(251, 43.8, 54.3),
@@ -21,25 +18,9 @@ const colors = {
 } as const satisfies Record<string, RGBA>;
 
 function App() {
-  const [issues, setItems] = useState<Issue[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { issues, loading, error, refreshIssue } = useIssuesAndPRs();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-
-  useEffect(() => {
-    setLoading(true);
-    fetchIssuesAndPRs()
-      .then((items) => {
-        setItems(items);
-        return Bun.write(
-          "resend-issues-prs.json",
-          JSON.stringify(items, null, 2),
-        );
-      })
-      .catch((error) => setError(String(error)))
-      .finally(() => setLoading(false));
-  }, []);
 
   const [selected, setSelected] = useState(0);
 
@@ -55,11 +36,6 @@ function App() {
       number.includes(query)
     );
   });
-
-  // Reset selection when filter changes
-  useEffect(() => {
-    setSelected(0);
-  }, [searchQuery]);
 
   useKeyboard((key) => {
     if (key.raw === "q" && !isSearchFocused) {
@@ -89,7 +65,10 @@ function App() {
         <input
           focused={isSearchFocused}
           value={searchQuery}
-          onChange={setSearchQuery}
+          onChange={(value) => {
+            setSearchQuery(value);
+            setSelected(0);
+          }}
           onSubmit={() => setIsSearchFocused(false)}
           placeholder="Type to filter... (press / to focus, Esc to unfocus)"
         />
@@ -115,18 +94,15 @@ function App() {
         </box>
       )}
 
-      {!loading &&
-        !error &&
-        issues.length > 0 &&
-        filteredIssues.length === 0 && (
-          <box>
-            <text attributes={TextAttributes.DIM}>
-              No results matching "{searchQuery}"
-            </text>
-          </box>
-        )}
+      {!error && issues.length > 0 && filteredIssues.length === 0 && (
+        <box>
+          <text attributes={TextAttributes.DIM}>
+            No results matching "{searchQuery}"
+          </text>
+        </box>
+      )}
 
-      {!loading && !error && filteredIssues.length > 0 && (
+      {!error && filteredIssues.length > 0 && (
         <select
           focused={!isSearchFocused}
           showScrollIndicator
@@ -136,25 +112,7 @@ function App() {
               if (selected === undefined) return;
               const issue = filteredIssues[selected];
               if (issue === undefined) return;
-              const refreshed = await octokit.issues.get({
-                repo: getRepositoryName(issue),
-                owner: "resend",
-                issue_number: issue.number,
-              });
-              setItems((prevItems) => {
-                const originalIndex = prevItems.findIndex(
-                  (i) => i.id === issue.id,
-                );
-                if (originalIndex === -1) return prevItems;
-                if (refreshed.data.state === "closed") {
-                  return prevItems.filter(
-                    (_, index) => index !== originalIndex,
-                  );
-                }
-                const newItems = [...prevItems];
-                newItems[originalIndex] = refreshed.data as Issue;
-                return newItems;
-              });
+              await refreshIssue(issue);
             }
           }}
           selectedIndex={selected}

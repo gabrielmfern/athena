@@ -1,10 +1,27 @@
+import { existsSync } from "node:fs";
 import { octokit } from "../octokit";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 export type Issue = Awaited<
   ReturnType<typeof octokit.rest.search.issuesAndPullRequests>
 >["data"]["items"][number];
 
 export async function fetchIssuesAndPRs() {
+  const jsonPath = join(process.cwd(), "resend-issues-prs.json");
+  if (!existsSync(jsonPath)) {
+    return [];
+  }
+
+  // Load issues and PRs from JSON file
+  const fileContent = await readFile(jsonPath, "utf-8");
+  const issues: Issue[] = JSON.parse(fileContent);
+
+  return issues;
+}
+
+// Keep the original fetch logic for later use
+export async function fetchIssuesAndPRsFromAPI() {
   // Fetch all open issues and PRs from resend organization using search API with pagination
   const [issues, prs] = await Promise.all([
     octokit.paginate(octokit.rest.search.issuesAndPullRequests, {
