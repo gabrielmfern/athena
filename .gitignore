@@ -24,7 +24,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # caches
 .eslintcache
-resend-issues-prs.json
 .cache
 *.tsbuildinfo
 
